@@ -1,0 +1,55 @@
+CFLAGS  := -O2
+
+CC 		= $(CROSS_COMPILE)gcc
+CPP		= $(CROSS_COMPILE)g++
+AR 		= $(CROSS_COMPILE)ar
+STRIP 		= $(CROSS_COMPILE)strip
+LD 		= $(CROSS_COMPILE)ld
+
+CURDIR = $(shell pwd)
+
+
+
+LIBSDIR = -L/usr/lib
+
+LIBSDIR += -L/lib
+LIBSDIR += -L/usr/lib
+LIBSDIR += -L/lib/hbmedia
+LIBSDIR += -L/lib/hbbpu
+LIBSDIR += -L/lib/modules
+LIBSDIR += -L/lib/firmware
+LIBSDIR += -L/lib/pkgconfig
+LIBSDIR += -L/lib/sensorlib
+LIBSDIR += -L/lib/udev
+LIBSDIR += -L/lib/udev
+
+INCDIR = -I$(CURDIR)
+INCDIR += -I/usr/include
+INCDIR += -I/usr/include/vio
+INCDIR += -I/usr/include/hbmedia
+
+LDFLAGS =-lcam          \
+	-lhbmedia       \
+	-lgdcbin        \
+	-liar           \
+	-lisp_algo      \
+	-ltinyalsa      \
+	-lmultimedia    \
+	-lz             \
+	-lavformat      \
+	-lavcodec       \
+	-lavutil        \
+	-lswresample    \
+	-ldl            \
+	-lion           \
+	-lalog          \
+	-lturbojpeg     \
+	-ldiag          \
+	-lcjson         \
+	-lhbmem         \
+	-lrt            \
+	-lstdc++        \
+	-lm             \
+	-lpthread		\
+	-lvio           \
+	-lisp           

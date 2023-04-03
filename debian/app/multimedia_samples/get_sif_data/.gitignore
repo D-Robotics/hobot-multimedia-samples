@@ -1,0 +1,8 @@
+*.o
+*.so
+*.a
+*.patch
+*.vscode
+get_sif_data
+*.raw
+*.yuv

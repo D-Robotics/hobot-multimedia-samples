@@ -1,0 +1,8 @@
+*.o
+*.so
+*.a
+*.patch
+*.vscode
+get_isp_data
+*.raw
+*.yuv

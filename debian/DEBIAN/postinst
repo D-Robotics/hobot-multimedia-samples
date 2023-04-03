@@ -1,0 +1,7 @@
+#!/bin/bash
+echo "Postinst start pwd is `pwd`"
+
+
+chown -R :video /app/multimedia_samples
+
+exit 0
