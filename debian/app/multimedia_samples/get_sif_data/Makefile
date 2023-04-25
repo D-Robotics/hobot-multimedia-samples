@@ -4,7 +4,9 @@ ifeq ($(PARAM_FILE),)
 endif
 
 TARGET = get_sif_data
-SRC_PATH := $(CURDIR) 
+
+SRC_PATH := $(CURDIR) $(CURDIR)/sensors
+LDS_FILE = sensors.lds
 
 SRCS := $(foreach cf, $(SRC_PATH), $(wildcard $(cf)/*.c))
 OBJS :=  $(SRCS:.c=.o)
@@ -17,7 +19,7 @@ OBJS :=  $(SRCS:.c=.o)
 
 $(TARGET):$(OBJS)
 	@mkdir -p $(abspath $(dir $@))
-	$(CC) -O3 -o $@ $(OBJS) $(CFLAGS) ${LIBSDIR} $(LDFLAGS)
+	$(CC) -O3 -o $@ $(OBJS) $(LDS_FILE) $(CFLAGS) ${LIBSDIR} $(LDFLAGS)
 
 all: ${TARGET}
 

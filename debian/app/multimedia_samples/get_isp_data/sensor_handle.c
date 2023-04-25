@@ -7,11 +7,22 @@
 #include <time.h>
 #include <ctype.h>
 #include <sys/stat.h>
-#include "vio/hb_vio_interface.h"
-#include "cam/hb_cam_interface.h"
+
 /*#include <module.h>*/
 #include <sensor_handle.h>
 
+/*定义 sensor   初始化的属性信息 */
+MIPI_SENSOR_INFO_S snsinfo;
+/*定义 mipi 初始化参数信息 */
+MIPI_ATTR_S mipi_attr;
+/*定义 dev 初始化的属性信息 */
+VIN_DEV_ATTR_S devinfo;
+/*定义 pipe 属性信息 */
+VIN_PIPE_ATTR_S pipeinfo;
+/*定义 dis 属性信息 */
+VIN_DIS_ATTR_S disinfo;
+/*定义 ldc 属性信息 */
+VIN_LDC_ATTR_S ldcinfo;
 
 #define HW_TIMER 24000
 #define MAX_PLANE 4
@@ -124,19 +135,19 @@ static int x3_dumpToFile2plane(char *filename, char *srcBuf, char *srcBuf1,
 }
 
 
-// static void print_sensor_info(MIPI_SENSOR_INFO_S *snsinfo)
-// {
-// 	printf("bus_num %d\n", snsinfo->sensorInfo.bus_num);
-// 	printf("bus_type %d\n", snsinfo->sensorInfo.bus_type);
-// 	printf("sensor_name %s\n", snsinfo->sensorInfo.sensor_name);
-// 	printf("reg_width %d\n", snsinfo->sensorInfo.reg_width);
-// 	printf("sensor_mode %d\n", snsinfo->sensorInfo.sensor_mode);
-// 	printf("sensor_addr 0x%x\n", snsinfo->sensorInfo.sensor_addr);
-// 	printf("serial_addr 0x%x\n", snsinfo->sensorInfo.serial_addr);
-// 	printf("resolution %d\n", snsinfo->sensorInfo.resolution);
+static void print_sensor_info(MIPI_SENSOR_INFO_S *snsinfo)
+{
+	printf("bus_num %d\n", snsinfo->sensorInfo.bus_num);
+	printf("bus_type %d\n", snsinfo->sensorInfo.bus_type);
+	printf("sensor_name %s\n", snsinfo->sensorInfo.sensor_name);
+	printf("reg_width %d\n", snsinfo->sensorInfo.reg_width);
+	printf("sensor_mode %d\n", snsinfo->sensorInfo.sensor_mode);
+	printf("sensor_addr 0x%x\n", snsinfo->sensorInfo.sensor_addr);
+	printf("serial_addr 0x%x\n", snsinfo->sensorInfo.serial_addr);
+	printf("resolution %d\n", snsinfo->sensorInfo.resolution);
 
-// 	return;
-// }
+	return;
+}
 
 void x3_normal_buf_info_print(hb_vio_buffer_t * buf)
 {
@@ -160,7 +171,115 @@ int time_cost_ms(struct timeval *start, struct timeval *end)
 	return time_ms;
 }
 
+int sif_dump_func(void)
+{
+	struct timeval time_now = { 0 };
+	struct timeval time_next = { 0 };
+	int size = -1;
+	char file_name[128] = { 0 };
+	dump_info_t dump_info = {0};
+	int ret = 0, i;
+	hb_vio_buffer_t *sif_raw = NULL;
+	int pipeId = 0;
 
+	sif_raw = (hb_vio_buffer_t *) malloc(sizeof(hb_vio_buffer_t));
+	memset(sif_raw, 0, sizeof(hb_vio_buffer_t));
+
+	/* 从SIF模块获取图像帧 */
+	ret = HB_VIN_GetDevFrame(pipeId, 0, sif_raw, 2000);
+	if (ret < 0) {
+		printf("HB_VIN_GetDevFrame error!!!\n");
+	} else {
+		x3_normal_buf_info_print(sif_raw);
+		size = sif_raw->img_addr.stride_size * sif_raw->img_addr.height;
+		printf("stride_size(%u) w x h%u x %u  size %d\n",
+				sif_raw->img_addr.stride_size,
+				sif_raw->img_addr.width, sif_raw->img_addr.height, size);
+
+		if (sif_raw->img_info.planeCount == 1) {
+			/* 一般是 raw 图 */
+			dump_info.ctx_id = pipeId;
+			dump_info.raw.frame_id = sif_raw->img_info.frame_id;
+			dump_info.raw.plane_count = sif_raw->img_info.planeCount;
+			dump_info.raw.xres[0] = sif_raw->img_addr.width;
+			dump_info.raw.yres[0] = sif_raw->img_addr.height;
+			dump_info.raw.addr[0] = sif_raw->img_addr.addr[0];
+			dump_info.raw.size[0] = size;
+
+			printf("pipe(%d)dump normal raw frame id(%d),plane(%d)size(%d)\n",
+					dump_info.ctx_id, dump_info.raw.frame_id,
+					dump_info.raw.plane_count, size);
+		} else if (sif_raw->img_info.planeCount == 2) {
+			/* 一般是 yuv 图，如果开启了dol2模式，则是两帧raw图， 根据img_format进行区分 */
+			dump_info.ctx_id = pipeId;
+			dump_info.raw.frame_id = sif_raw->img_info.frame_id;
+			dump_info.raw.plane_count = sif_raw->img_info.planeCount;
+			for (int i = 0; i < sif_raw->img_info.planeCount; i ++) {
+				dump_info.raw.xres[i] = sif_raw->img_addr.width;
+				dump_info.raw.yres[i] = sif_raw->img_addr.height;
+				dump_info.raw.addr[i] = sif_raw->img_addr.addr[i];
+				dump_info.raw.size[i] = size;
+			}
+			if(sif_raw->img_info.img_format == 0) {
+				printf("pipe(%d)dump dol2 raw frame id(%d),plane(%d)size(%d)\n",
+						dump_info.ctx_id, dump_info.raw.frame_id,
+						dump_info.raw.plane_count, size);
+			}
+		} else if (sif_raw->img_info.planeCount == 3) {
+			/* 一般是 dol3 模式下的3帧raw图 */
+			dump_info.ctx_id = pipeId;
+			dump_info.raw.frame_id = sif_raw->img_info.frame_id;
+			dump_info.raw.plane_count = sif_raw->img_info.planeCount;
+			for (int i = 0; i < sif_raw->img_info.planeCount; i ++) {
+				dump_info.raw.xres[i] = sif_raw->img_addr.width;
+				dump_info.raw.yres[i] = sif_raw->img_addr.height;
+				dump_info.raw.addr[i] = sif_raw->img_addr.addr[i];
+				dump_info.raw.size[i] = size;
+			}
+			printf("pipe(%d)dump dol3 raw frame id(%d),plane(%d)size(%d)\n",
+					dump_info.ctx_id, dump_info.raw.frame_id,
+					dump_info.raw.plane_count, size);
+		} else {
+			printf("pipe(%d)raw buf planeCount wrong !!!\n", pipeId);
+		}
+
+		for (int i = 0; i < dump_info.raw.plane_count; i ++) {
+			if(sif_raw->img_info.img_format == 0) {
+				sprintf(file_name, "pipe%d_plane%d_%ux%u_frame_%03d.raw",
+						dump_info.ctx_id,
+						i,
+						dump_info.raw.xres[i],
+						dump_info.raw.yres[i],
+						dump_info.raw.frame_id);
+
+				gettimeofday(&time_now, NULL);
+				x3_dumpToFile(file_name,  dump_info.raw.addr[i], dump_info.raw.size[i]);
+				gettimeofday(&time_next, NULL);
+				int time_cost = time_cost_ms(&time_now, &time_next);
+				printf("dumpToFile raw cost time %d ms\n", time_cost);
+			}
+		}
+		if(sif_raw->img_info.img_format == 8) {
+			sprintf(file_name, "pipe%d_%ux%u_frame_%03d.yuv",
+					dump_info.ctx_id,
+					dump_info.raw.xres[i],
+					dump_info.raw.yres[i],
+					dump_info.raw.frame_id);
+			gettimeofday(&time_now, NULL);
+			x3_dumpToFile2plane(file_name, sif_raw->img_addr.addr[0],
+					sif_raw->img_addr.addr[1], size, size/2);
+			gettimeofday(&time_next, NULL);
+			int time_cost = time_cost_ms(&time_now, &time_next);
+			printf("dumpToFile yuv cost time %d ms", time_cost);
+		}
+		ret = HB_VIN_ReleaseDevFrame(pipeId, 0, sif_raw);
+		if (ret < 0) {
+			printf("HB_VIN_ReleaseDevFrame error!!!\n");
+		}
+	}
+	free(sif_raw);
+	sif_raw = NULL;
+}
 
 int yuv_dump_func(void)
 {
@@ -177,10 +296,9 @@ int yuv_dump_func(void)
 	memset(yuv_buf, 0, sizeof(hb_vio_buffer_t));
 
 	/* 从VIN模块获取图像帧 */
-	ret = hb_vio_get_data(pipeId, HB_VIO_ISP_YUV_DATA, yuv_buf);
-	if (ret < 0)
-	{
-		printf("hb_vio_get_data error!!!\n");
+	ret = HB_VIN_GetChnFrame(pipeId, 0, yuv_buf, 2000);
+	if (ret < 0) {
+		printf("HB_VIN_GetChnFrame error!!!\n");
 	} else {
 		x3_normal_buf_info_print(yuv_buf);
 		size = yuv_buf->img_addr.stride_size * yuv_buf->img_addr.height;
@@ -212,56 +330,134 @@ int yuv_dump_func(void)
 		int time_cost = time_cost_ms(&time_now, &time_next);
 		printf("dumpToFile yuv cost time %d ms\n", time_cost);
 		
-		// ret = HB_VIN_ReleaseChnFrame(pipeId, 0, yuv_buf);
-		// if (ret < 0) {
-		// 	printf("HB_VIN_ReleaseChnFrame error!!!\n");
-		// }
+		ret = HB_VIN_ReleaseChnFrame(pipeId, 0, yuv_buf);
+		if (ret < 0) {
+			printf("HB_VIN_ReleaseChnFrame error!!!\n");
+		}
 	}
 	free(yuv_buf);
 	yuv_buf = NULL;
 }
 
-int sensor_sif_dev_init(char *cam_cfg_file, char *vio_cfg_file, int cam_index)
+int sensor_sif_dev_init(void)
 {
-	int ret = 0, port = 0;
-	// int cam_index = 0;
-	// char *cam_cfg_file = "./hb_x3player.json";
-	// char *vio_cfg_file = "./sdb_imx219_raw_10bit_1920x1080_offline_Pipeline.json";
-	ret = hb_cam_init(cam_index, cam_cfg_file);
-	if (ret < 0)
-	{
-		printf("cam init fail\n");
-		return -1;
+	int ret = 0;
+	int devId = 0;
+	int pipeId = 0;
+
+	// 使能 mclk
+	HB_MIPI_EnableSensorClock(0);
+	HB_MIPI_SetSensorClock(0, 24000000);
+	HB_MIPI_EnableSensorClock(1);
+	HB_MIPI_SetSensorClock(1, 24000000);
+
+	// 初始化sensor，配置sensor寄存器
+	HB_MIPI_SensorBindSerdes(&snsinfo, snsinfo.sensorInfo.deserial_index, snsinfo.sensorInfo.deserial_port);
+	HB_MIPI_SensorBindMipi(&snsinfo, snsinfo.sensorInfo.entry_index);
+	print_sensor_info(&snsinfo);
+	ret = HB_MIPI_InitSensor(devId, &snsinfo);
+	if (ret < 0) {
+		printf("hb mipi init sensor error!\n");
+		return ret;
 	}
-	ret = hb_vio_init(vio_cfg_file);
-	if (ret < 0)
-	{
-		printf("vio init fail\n");
-		return -1;
-	}
-	ret = hb_vio_start_pipeline(0);
-	if (ret < 0)
-	{
-		printf("vio start fail, do cam&vio deinit.\n");
-		hb_cam_deinit(0);
-		hb_vio_deinit();
-		return -1;
+	printf("hb sensor init success...\n");
+
+	// 需要设置成offline模式，否则获取不到raw图
+	ret = HB_SYS_SetVINVPSMode(0, VIN_OFFLINE_VPS_OFFINE);
+	if (ret < 0) {
+		printf("HB_SYS_SetVINVPSMode error!\n");
+		return ret;
 	}
 
-	ret = hb_cam_power_on(port);
-	if (ret < 0)
-	{
-		printf("hb_cam_power_on fail, do cam deinit\n");
-		hb_cam_stop(port);
-		hb_cam_deinit(cam_index);
-		return -1;
+	// 必须要初始化isp来贯通pipeline，即使isp不工作也需要，否则 HB_MIPI_SetMipiAttr 会失败
+	ret = HB_VIN_CreatePipe(0, &pipeinfo);  // isp init
+	if (ret < 0) {
+		printf("HB_VIN_CreatePipe error!\n");
+		return ret;
 	}
-	ret = hb_cam_start(port);
+
+	// 初始化mipi，设置mipi host的mipiclk、linelength、framelength、settle等参数
+	ret = HB_MIPI_SetMipiAttr(snsinfo.sensorInfo.entry_index, &mipi_attr);
+	if (ret < 0) {
+		printf("hb mipi set mipi attr error!\n");
+		return ret;
+	}
+	printf("hb mipi init success...\n");
+
+	printf("devId: %d snsinfo.sensorInfo.entry_index:%d\n", devId, snsinfo.sensorInfo.entry_index);
+	ret = HB_VIN_SetMipiBindDev(devId, snsinfo.sensorInfo.entry_index); /* mipi和vin(sif) dev 绑定 */
+	if (ret < 0) {
+		printf("HB_VIN_SetMipiBindDev error!\n");
+		return ret;
+	}
+	printf("camera_info->mipi_attr.mipi_host_cfg.channel_num: %d\n", mipi_attr.mipi_host_cfg.channel_num);
+	ret = HB_VIN_SetDevVCNumber(devId, mipi_attr.mipi_host_cfg.channel_sel[0]); /* 确定使用哪几个虚拟通道作为mipi的输入 */
+	if (ret < 0) {
+		printf("HB_VIN_SetDevVCNumber error!\n");
+		return ret;
+	}
+
+	ret = HB_VIN_SetDevAttr(devId, &devinfo);  // sif init
+	if (ret < 0) {
+		printf("HB_VIN_SetDevAttr error!\n");
+		return ret;
+	}
+	ret = HB_VIN_SetPipeAttr(pipeId, &pipeinfo);  // isp init
+    if (ret < 0) {
+        printf("HB_VIN_SetPipeAttr error!\n");
+        return ret;
+    }
+	ret = HB_VIN_SetChnDISAttr(pipeId, 1, &disinfo);  //  dis init
+    if (ret < 0) {
+        printf("HB_VIN_SetChnDISAttr error!\n");
+        return ret;
+    }
+    ret = HB_VIN_SetChnLDCAttr(pipeId, 1, &ldcinfo);  //  ldc init
+    if (ret < 0) {
+        printf("HB_VIN_SetChnLDCAttr error!\n");
+        return ret;
+    }
+	ret = HB_VIN_SetChnAttr(pipeId, 1);  //  dwe init
+    if (ret < 0) {
+        printf("HB_VIN_SetChnAttr error!\n");
+        return ret;
+    }
+	ret = HB_VIN_SetDevBindPipe(pipeId, pipeId);  //  bind init
+    if (ret < 0) {
+        printf("HB_VIN_SetDevBindPipe error!\n");
+        return ret;
+    }
+	ret = HB_VIN_EnableChn(pipeId, 0); // dwe start
 	if (ret < 0)
 	{
-		printf("cam start fail, do cam deinit\n");
-		hb_cam_deinit(cam_index);
-		return -1;
+		printf("HB_VIN_EnableChn error!\n");
+		return ret;
+	}
+	ret = HB_VIN_StartPipe(pipeId); // isp start
+	if (ret < 0)
+	{
+		printf("HB_VIN_StartPipe error!\n");
+		return ret;
+	}
+	ret = HB_VIN_EnableDev(0); // sif start && start thread
+	if (ret < 0)
+	{
+		printf("HB_VIN_EnableDev error!\n");
+		return ret;
+	}
+
+	/* sensor出流，streamon*/
+	ret = HB_MIPI_ResetSensor(devId);
+	if (ret < 0)
+	{
+		printf("HB_MIPI_ResetSensor error!\n");
+		return ret;
+	}
+	ret = HB_MIPI_ResetMipi(snsinfo.sensorInfo.entry_index);
+	if (ret < 0)
+	{
+		printf("HB_MIPI_ResetMipi error, ret= %d\n", ret);
+		return ret;
 	}
 	return ret;
 }

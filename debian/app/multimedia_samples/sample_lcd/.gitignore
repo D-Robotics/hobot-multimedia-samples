@@ -1,0 +1,9 @@
+*.o
+*.so
+*.a
+*.patch
+*.vscode
+*vot_lcd_test
+*.raw
+*.yuv
+

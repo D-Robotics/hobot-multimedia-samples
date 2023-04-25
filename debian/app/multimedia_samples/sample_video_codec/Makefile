@@ -1,23 +1,19 @@
-ifeq ($(PARAM_FILE),) 
+ifeq ($(PARAM_FILE),)
     PARAM_FILE:=../Makefile.param
     include $(PARAM_FILE)
 endif
 
-TARGET = sample_vcodec
-SRC_PATH := $(CURDIR) 
+INCDIR += -I$(CURDIR)/../../hbre/third_party/usr/include
+LIBSDIR += -L$(CURDIR)/../../hbre/third_party/usr/lib
 
-SRCS := $(foreach cf, $(SRC_PATH), $(wildcard $(cf)/*.c))
-OBJS :=  $(SRCS:.c=.o)
+SRCS = $(wildcard *.c)
+
+TARGET = $(patsubst %.c, %, ${SRCS})
 
 .PHONY: all clean
 
-%.o:%.c
-	@mkdir -p $(abspath $(dir $@))
-	$(CC) -o $@ $(INCDIR) -c $<
-
-$(TARGET):$(OBJS)
-	@mkdir -p $(abspath $(dir $@))
-	$(CC) -O3 -o $@ $(OBJS) $(CFLAGS) ${LIBSDIR} $(LDFLAGS)
+%:%.c
+	$(CC) -o $@ $^ $(INCDIR) ${CFLAGS} ${LIBSDIR} $(LDFLAGS)
 
 all: ${TARGET}
 

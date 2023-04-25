@@ -1,0 +1,12 @@
+*.o
+*.so
+*.a
+*.patch
+*.vscode
+sample_usb_cam
+*.raw
+*.yuv
+out
+*.d
+*.obj
+

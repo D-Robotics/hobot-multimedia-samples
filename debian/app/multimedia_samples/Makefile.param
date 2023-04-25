@@ -1,4 +1,6 @@
-CFLAGS  := -O2
+
+
+CFLAGS  := -O3
 
 CC 		= $(CROSS_COMPILE)gcc
 CPP		= $(CROSS_COMPILE)g++
@@ -10,18 +12,18 @@ CURDIR = $(shell pwd)
 
 
 
-LIBSDIR = -L/usr/lib
-
-LIBSDIR += -L/lib
 LIBSDIR += -L/usr/lib
-LIBSDIR += -L/lib/hbmedia
-LIBSDIR += -L/lib/hbbpu
-LIBSDIR += -L/lib/modules
-LIBSDIR += -L/lib/firmware
-LIBSDIR += -L/lib/pkgconfig
-LIBSDIR += -L/lib/sensorlib
-LIBSDIR += -L/lib/udev
-LIBSDIR += -L/lib/udev
+LIBSDIR += -L/usr/usr/lib
+LIBSDIR += -L/usr/lib/hbmedia
+LIBSDIR += -L/usr/lib/hbbpu
+LIBSDIR += -L/usr/lib/modules
+LIBSDIR += -L/usr/lib/firmware
+LIBSDIR += -L/usr/lib/pkgconfig
+LIBSDIR += -L/usr/lib/sensorlib
+LIBSDIR += -L/usr/lib/udev
+LIBSDIR += -L/usr/lib/udev
+LIBSDIR += -L/usr/lib/aarch64-linux-gnu
+
 
 INCDIR = -I$(CURDIR)
 INCDIR += -I/usr/include
@@ -29,8 +31,10 @@ INCDIR += -I/usr/include/vio
 INCDIR += -I/usr/include/hbmedia
 
 LDFLAGS =-lcam          \
+	-lvio           \
 	-lhbmedia       \
 	-lgdcbin        \
+	-lisp           \
 	-liar           \
 	-lisp_algo      \
 	-ltinyalsa      \
@@ -50,6 +54,5 @@ LDFLAGS =-lcam          \
 	-lrt            \
 	-lstdc++        \
 	-lm             \
-	-lpthread		\
-	-lvio           \
-	-lisp           
+	-lpthread
+

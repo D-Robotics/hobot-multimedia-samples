@@ -7,7 +7,21 @@
 #include "hb_vio_interface.h"
 #include "hb_mode.h"
 
-int sensor_sif_dev_init(char *cam_cfg_file, char *vio_cfg_file,int cam_index);
+/*定义 sensor   初始化的属性信息 */
+extern MIPI_SENSOR_INFO_S snsinfo;
+/*定义 mipi 初始化参数信息 */
+extern MIPI_ATTR_S mipi_attr;
+/*定义 dev 初始化的属性信息 */
+extern VIN_DEV_ATTR_S devinfo;
+/*定义 pipe 属性信息 */
+extern VIN_PIPE_ATTR_S pipeinfo;
+/*定义 dis 属性信息 */
+extern VIN_DIS_ATTR_S disinfo;
+/*定义 ldc 属性信息 */
+extern VIN_LDC_ATTR_S ldcinfo;
+
+int sensor_sif_dev_init(void);
+int sif_dump_func(void);
 int yuv_dump_func(void);
 
 #endif
