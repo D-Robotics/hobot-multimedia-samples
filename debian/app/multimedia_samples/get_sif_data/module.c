@@ -25,7 +25,7 @@ int sensor_modules_probe(void)
 	install_call *fn ;
 
 	int *sensor_module_start = &__sensor_module_start;
-	sensor_module_start++; // skip .inst
+	//sensor_module_start++; // skip .inst
 
 	memset(sensor_lists, 0, sizeof(sensor_lists));
 
