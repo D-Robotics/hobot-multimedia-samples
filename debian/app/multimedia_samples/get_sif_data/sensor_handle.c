@@ -389,6 +389,15 @@ int sensor_sif_dev_init(void)
 		printf("HB_VIN_SetDevVCNumber error!\n");
 		return ret;
 	}
+	if(devinfo.mipiAttr.ipi_channels > 1 && mipi_attr.mipi_host_cfg.channel_num > 1)
+	for(int i = 1 ; i < mipi_attr.mipi_host_cfg.channel_num; i++)
+	{
+		ret = HB_VIN_AddDevVCNumber(devId, mipi_attr.mipi_host_cfg.channel_sel[i]);
+		if(ret < 0) {
+			printf("HB_VIN_AddDevVCNumber error!\n");
+			return ret;
+		}
+	}
 
 	ret = HB_VIN_SetDevAttr(devId, &devinfo);  // sif init
 	if (ret < 0) {
