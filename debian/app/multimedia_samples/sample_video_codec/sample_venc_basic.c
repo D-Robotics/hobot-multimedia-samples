@@ -25,6 +25,7 @@ typedef struct {
   char* picFile1;
   pthread_mutex_t init_lock;
   pthread_cond_t init_cond;
+  int initialized; /*init single to sync pthread*/
 } SAMPLE_VENC_ATTR_S;
 
 int running = 0;
@@ -101,15 +102,15 @@ int main(int argc, char **argv) {
         printf("HB_VENC_Module_Init: %d\n", s32Ret);
     }
 
-    s32Ret = pthread_create(&consumer, NULL, get_encode_data, &sample_attr);
-    if (s32Ret != 0) {
-        printf("consumer creat failed\n");
-        return 0;
-    }
-    usleep(10*1000);
     s32Ret = pthread_create(&producer, NULL, feed_encode_data, &sample_attr);
     if (s32Ret != 0) {
         printf("producer creat failed\n");
+        return 0;
+    }
+    usleep(10*1000);
+    s32Ret = pthread_create(&consumer, NULL, get_encode_data, &sample_attr);
+    if (s32Ret != 0) {
+        printf("consumer creat failed\n");
         return 0;
     }
 
@@ -182,6 +183,7 @@ void *feed_encode_data(void *attr) {
         printf("HB_VENC_StartRecvFrame failed\n");
         return NULL;
     }
+    sample_attr->initialized = 1; // set feed pthread single = 1
     pthread_cond_signal(&sample_attr->init_cond);
     pthread_mutex_unlock(&sample_attr->init_lock);  
 
@@ -270,7 +272,9 @@ void *get_encode_data(void *attr) {
     gettimeofday(&now, NULL);
     outtime.tv_sec = now.tv_sec + 1;
     outtime.tv_nsec = now.tv_usec * 1000;
-    pthread_cond_timedwait(&sample_attr->init_cond, &sample_attr->init_lock, &outtime); 
+    while (!sample_attr->initialized && running) {
+        pthread_cond_timedwait(&sample_attr->init_cond, &sample_attr->init_lock, &outtime);
+    }
     pthread_mutex_unlock(&sample_attr->init_lock); 
     while (running) {
         s32Ret = HB_VENC_GetStream(vencChn, &pstStream, 2000);
