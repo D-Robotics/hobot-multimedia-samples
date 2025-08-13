@@ -27,6 +27,9 @@ VIN_LDC_ATTR_S ldcinfo;
 #define HW_TIMER 24000
 #define MAX_PLANE 4
 
+extern int board_bus_num;
+extern int entry_index;
+
 typedef struct {
 	uint32_t frame_id;
 	uint32_t plane_count;
@@ -139,6 +142,7 @@ static void print_sensor_info(MIPI_SENSOR_INFO_S *snsinfo)
 {
 	printf("bus_num %d\n", snsinfo->sensorInfo.bus_num);
 	printf("bus_type %d\n", snsinfo->sensorInfo.bus_type);
+	printf("entry_index %d\n", snsinfo->sensorInfo.entry_index);
 	printf("sensor_name %s\n", snsinfo->sensorInfo.sensor_name);
 	printf("reg_width %d\n", snsinfo->sensorInfo.reg_width);
 	printf("sensor_mode %d\n", snsinfo->sensorInfo.sensor_mode);
@@ -354,6 +358,10 @@ int sensor_sif_dev_init(void)
 	// 初始化sensor，配置sensor寄存器
 	HB_MIPI_SensorBindSerdes(&snsinfo, snsinfo.sensorInfo.deserial_index, snsinfo.sensorInfo.deserial_port);
 	HB_MIPI_SensorBindMipi(&snsinfo, snsinfo.sensorInfo.entry_index);
+
+	snsinfo.sensorInfo.bus_num = board_bus_num;
+	snsinfo.sensorInfo.entry_index = entry_index;
+
 	print_sensor_info(&snsinfo);
 	ret = HB_MIPI_InitSensor(devId, &snsinfo);
 	if (ret < 0) {
