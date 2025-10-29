@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
         printf("HB_VDEC_Module_Uninit: %d\n", s32Ret);
     }
 
-    printf("Done\n");
+    printf("Done\nThe program exited normally. If you encounter a Get_Frame error, it may be because the file has already been read. Please check.\n");
     return 0;
 }
 
