@@ -67,15 +67,15 @@ int main(void)
 	devAttr.enIntfSync = VO_OUTPUT_USER;
 	devAttr.u32BgColor = 0x108080;
 	devAttr.enOutputMode = HB_VOT_OUTPUT_MIPI;
-	devAttr.stSyncInfo.pixel_clk = 64000000;
-	devAttr.stSyncInfo.hbp = 40;
-	devAttr.stSyncInfo.hfp = 40;
-	devAttr.stSyncInfo.hs = 10;
-	devAttr.stSyncInfo.vbp = 11;
-	devAttr.stSyncInfo.vfp = 16;
-	devAttr.stSyncInfo.vs = 3;
-	devAttr.stSyncInfo.width = 720;
-	devAttr.stSyncInfo.height = 1280;
+	devAttr.stSyncInfo.pixel_clk = 29000000;
+	devAttr.stSyncInfo.hbp = 61;
+	devAttr.stSyncInfo.hfp = 89;
+	devAttr.stSyncInfo.hs = 2;
+	devAttr.stSyncInfo.vbp = 23;
+	devAttr.stSyncInfo.vfp = 7;
+	devAttr.stSyncInfo.vs = 2;
+	devAttr.stSyncInfo.width = 800;
+	devAttr.stSyncInfo.height = 480;
 
 	ret = HB_VOT_SetPubAttr(0, &devAttr);
 	if (ret) {
@@ -86,8 +86,8 @@ int main(void)
 	if (ret)
 		printf("HB_VOT_Enable failed.\n");
 	memset(&stLayerAttr, 0, sizeof(stLayerAttr));
-	stLayerAttr.stImageSize.u32Width  = 720;
-	stLayerAttr.stImageSize.u32Height = 1280;
+	stLayerAttr.stImageSize.u32Width  = 800;
+	stLayerAttr.stImageSize.u32Height = 480;
 
 	stLayerAttr.panel_type = 0;
 	stLayerAttr.rotate = 0;
@@ -118,10 +118,10 @@ int main(void)
 	stChnAttr.u32Priority = 2;
 	stChnAttr.s32X = 0;
 	stChnAttr.s32Y = 0;
-	stChnAttr.u32SrcWidth = 720;
-	stChnAttr.u32SrcHeight = 1280;
-	stChnAttr.u32DstWidth = 720;
-	stChnAttr.u32DstHeight = 1280;
+	stChnAttr.u32SrcWidth = 800;
+	stChnAttr.u32SrcHeight = 480;
+	stChnAttr.u32DstWidth = 800;
+	stChnAttr.u32DstHeight = 480;
 	ret = HB_VOT_SetChnAttr(0, 0, &stChnAttr);
 	printf("HB_VOT_SetChnAttr 0: %d\n", ret);
 
@@ -133,9 +133,9 @@ int main(void)
 	ret = HB_VOT_EnableChn(0, 0);
 	printf("HB_VOT_EnableChn: %d\n", ret);
 
-	framesize[0] = get_file("./720x1280.yuv", &framebuf[0]);
+	framesize[0] = get_file("./test_800x480_nv12.yuv", &framebuf[0]);
 	if (framesize[0] == 0) {
-		printf("read file 1920_1080yuv8.yuv failed\n");
+		printf("read file test_800x480_nv12.yuv failed\n");
 		return -1;
 	}
 	printf("framesize:%d\n", framesize[0]);
